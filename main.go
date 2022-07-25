@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	_ "image/gif"
 	_ "image/jpeg"
@@ -156,6 +157,11 @@ func main() {
 					if err != nil {
 						fmt.Println("ERROR:", err)
 						continue
+					}
+					_, err = os.Stat(newdir)
+					for err != nil {
+						time.Sleep(time.Millisecond * 100)
+						_, err = os.Stat(newdir)
 					}
 					for _, i := range lst {
 						err = os.Rename(i.name, newdir+"/"+i.name)
