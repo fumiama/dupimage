@@ -172,5 +172,7 @@ func main() {
 				}
 			}
 		}
+	} else {
+		fmt.Println("no duplicated file")
 	}
 }
