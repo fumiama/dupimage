@@ -33,6 +33,7 @@ func main() {
 	dir := flag.String("d", "./", "work directory")
 	a := flag.Bool("a", false, "action sort")
 	h := flag.Bool("h", false, "display help")
+	s := flag.Uint("s", 0, "folder sequence number start (exclude)")
 	flag.Parse()
 	if *h {
 		fmt.Println("Usage:", os.Args[0], "[-adht] ext1 ext2...")
@@ -144,13 +145,13 @@ func main() {
 		}
 	}
 	if hasfound {
-		j := 0
+		j := *s
 		for _, lst := range dups {
 			if len(lst) > 0 {
 				j++
 				fmt.Println("[", j, "] duplicate:", lst)
 				if action {
-					newdir := strconv.Itoa(j)
+					newdir := strconv.FormatUint(uint64(j), 10)
 					err = os.MkdirAll(newdir, 0755)
 					if err != nil {
 						fmt.Println("ERROR:", err)
