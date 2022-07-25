@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	_ "image/gif"
 	_ "image/jpeg"
@@ -117,7 +116,8 @@ func main() {
 	}
 	wg.Wait()
 	fmt.Println("read file success, comparing...")
-	dups := make([][]*imagecheck, len(chklst))
+	duplis := make(map[string]uint, len(chklst))
+	sameset := make([][]uint, 0)
 	wg.Add(len(chklst))
 	for i := 0; i < len(chklst); i++ {
 		go func(i int) {
@@ -129,7 +129,22 @@ func main() {
 				}
 				if uint(dis) < throttle {
 					mu.Lock()
-					dups[i] = append(dups[i], &chklst[j])
+					if x, ok := duplis[chklst[j].name]; ok && x != uint(i) {
+					LOP:
+						for k, set := range sameset {
+							for _, item := range set {
+								if item == x {
+									sameset[k] = append(sameset[k], uint(i))
+									duplis[chklst[i].name] = uint(i)
+									break LOP
+								}
+							}
+						}
+					} else if !ok {
+						sameset = append(sameset, []uint{uint(i)})
+						duplis[chklst[i].name] = uint(i)
+					}
+					duplis[chklst[j].name] = uint(i)
 					mu.Unlock()
 				}
 			}
@@ -138,16 +153,24 @@ func main() {
 	}
 	wg.Wait()
 	fmt.Println("compare file success")
-	hasfound := false
-	for i, lst := range dups {
-		if len(lst) > 0 {
-			dups[i] = append(dups[i], &chklst[i])
-			hasfound = true
+	if len(sameset) > 0 {
+		dupset := make(map[uint][]string, len(sameset))
+		setindex := func(i uint) uint {
+			for _, set := range sameset {
+				for _, n := range set {
+					if n == i {
+						return set[0]
+					}
+				}
+			}
+			panic("internal logic error")
 		}
-	}
-	if hasfound {
+		for k, v := range duplis {
+			i := setindex(v)
+			dupset[i] = append(dupset[i], k)
+		}
 		j := *s
-		for _, lst := range dups {
+		for _, lst := range dupset {
 			if len(lst) > 0 {
 				j++
 				fmt.Println("[", j, "] duplicate:", lst)
@@ -158,13 +181,8 @@ func main() {
 						fmt.Println("ERROR:", err)
 						continue
 					}
-					_, err = os.Stat(newdir)
-					for err != nil {
-						time.Sleep(time.Millisecond * 100)
-						_, err = os.Stat(newdir)
-					}
 					for _, i := range lst {
-						err = os.Rename(i.name, newdir+"/"+i.name)
+						err = os.Rename(i, newdir+"/"+i)
 						if err != nil {
 							fmt.Println("ERROR:", err)
 						}
