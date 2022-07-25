@@ -148,7 +148,7 @@ func main() {
 		for _, lst := range dups {
 			if len(lst) > 0 {
 				j++
-				fmt.Println("[", j, "] duplicate: ", lst)
+				fmt.Println("[", j, "] duplicate:", lst)
 				if action {
 					newdir := strconv.Itoa(j)
 					err = os.MkdirAll(newdir, 0755)
