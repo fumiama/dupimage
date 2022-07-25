@@ -106,7 +106,7 @@ func main() {
 						name: n,
 						dh:   dh,
 					})
-					fmt.Print("scan: ", len(chklst), " / ", len(imgs), "\r")
+					fmt.Print("read: ", len(chklst), " / ", len(imgs), "\r")
 					mu.Unlock()
 					_ = f.Close()
 				}
@@ -118,40 +118,55 @@ func main() {
 	fmt.Println("read file success, comparing...")
 	duplis := make(map[string]uint, len(chklst))
 	sameset := make([][]uint, 0)
-	wg.Add(len(chklst))
 	for i := 0; i < len(chklst); i++ {
-		go func(i int) {
-			for j := len(chklst) - 1; j > i; j-- {
-				dis, err := chklst[i].dh.Distance(chklst[j].dh)
-				if err != nil {
-					fmt.Println("ERROR:", err)
-					continue
-				}
-				if uint(dis) < throttle {
-					mu.Lock()
-					if x, ok := duplis[chklst[j].name]; ok && x != uint(i) {
-					LOP:
-						for k, set := range sameset {
-							for _, item := range set {
-								if item == x {
+		fmt.Print("compare: ", i, " / ", len(chklst), "\r")
+		_, ok := duplis[chklst[i].name]
+		if ok {
+			continue
+		}
+		isfirst := true
+		for j := len(chklst) - 1; j > i; j-- {
+			dis, err := chklst[i].dh.Distance(chklst[j].dh)
+			if err != nil {
+				fmt.Println("ERROR:", err)
+				continue
+			}
+			if uint(dis) < throttle {
+				x, ok := duplis[chklst[j].name]
+				if ok {
+				LOP:
+					for k, set := range sameset {
+						for _, item := range set {
+							if x == item {
+								if isfirst {
 									sameset[k] = append(sameset[k], uint(i))
 									duplis[chklst[i].name] = uint(i)
-									break LOP
+									isfirst = false
+								} else {
+								INNERLOP:
+									for l, set := range sameset {
+										for _, item := range set {
+											if item == uint(i) {
+												sameset[k] = append(sameset[k], set...)
+												sameset = append(sameset[:l], sameset[l+1:]...)
+												break INNERLOP
+											}
+										}
+									}
 								}
+								break LOP
 							}
 						}
-					} else if !ok {
-						sameset = append(sameset, []uint{uint(i)})
-						duplis[chklst[i].name] = uint(i)
 					}
-					duplis[chklst[j].name] = uint(i)
-					mu.Unlock()
+				} else if isfirst {
+					sameset = append(sameset, []uint{uint(i)})
+					duplis[chklst[i].name] = uint(i)
+					isfirst = false
 				}
+				duplis[chklst[j].name] = uint(i)
 			}
-			wg.Done()
-		}(i)
+		}
 	}
-	wg.Wait()
 	fmt.Println("compare file success")
 	if len(sameset) > 0 {
 		dupset := make(map[uint][]string, len(sameset))
