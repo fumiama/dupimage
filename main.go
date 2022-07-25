@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 
 	_ "image/gif"
@@ -31,11 +32,23 @@ func main() {
 	tht := flag.Uint("t", 5, "duplicate throttle, max is 64")
 	dir := flag.String("d", "./", "work directory")
 	a := flag.Bool("a", false, "action sort")
+	h := flag.Bool("h", false, "display help")
 	flag.Parse()
+	if *h {
+		fmt.Println("Usage:", os.Args[0], "[-adht] ext1 ext2...")
+		flag.PrintDefaults()
+		fmt.Println("  exts\tmatching extensions")
+		os.Exit(0)
+	}
 	throttle := *tht
 	if throttle > 64 {
 		panic("invalid throttle")
 	}
+	exts := flag.Args()
+	for i, e := range exts {
+		exts[i] = strings.ToLower(e)
+	}
+	fmt.Println("match extension:", exts)
 	err := os.Chdir(*dir)
 	if err != nil {
 		panic(err)
@@ -57,11 +70,20 @@ func main() {
 		if to > len(imgs) {
 			to = len(imgs)
 		}
+		isextinlist := func(n string) bool {
+			for _, e := range exts {
+				if strings.HasSuffix(strings.ToLower(n), e) {
+					return true
+				}
+			}
+			return false
+		}
 		go func(from, to int) {
 			for i := from; i < to; i++ {
 				img := imgs[i]
-				if !img.IsDir() {
-					f, err := os.Open(img.Name())
+				n := img.Name()
+				if !img.IsDir() && isextinlist(n) {
+					f, err := os.Open(n)
 					if err != nil {
 						panic(err)
 					}
@@ -75,7 +97,7 @@ func main() {
 					}
 					mu.Lock()
 					chklst = append(chklst, imagecheck{
-						name: img.Name(),
+						name: n,
 						dh:   dh,
 					})
 					fmt.Print("scan: ", len(chklst), " / ", len(imgs), "\r")
