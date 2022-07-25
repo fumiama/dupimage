@@ -85,15 +85,20 @@ func main() {
 				if !img.IsDir() && isextinlist(n) {
 					f, err := os.Open(n)
 					if err != nil {
-						panic(err)
+						fmt.Println("ERROR:", err)
+						continue
 					}
 					im, _, err := image.Decode(f)
 					if err != nil {
-						panic(err)
+						fmt.Println("ERROR:", err)
+						_ = f.Close()
+						continue
 					}
 					dh, err := goimagehash.DifferenceHash(im)
 					if err != nil {
-						panic(err)
+						fmt.Println("ERROR:", err)
+						_ = f.Close()
+						continue
 					}
 					mu.Lock()
 					chklst = append(chklst, imagecheck{
@@ -117,7 +122,8 @@ func main() {
 			for j := len(chklst) - 1; j > i; j-- {
 				dis, err := chklst[i].dh.Distance(chklst[j].dh)
 				if err != nil {
-					panic(err)
+					fmt.Println("ERROR:", err)
+					continue
 				}
 				if uint(dis) < throttle {
 					mu.Lock()
@@ -147,12 +153,13 @@ func main() {
 					newdir := strconv.Itoa(j)
 					err = os.MkdirAll(newdir, 0755)
 					if err != nil {
-						panic(err)
+						fmt.Println("ERROR:", err)
+						continue
 					}
 					for _, i := range lst {
 						err = os.Rename(i.name, newdir+"/"+i.name)
 						if err != nil {
-							panic(err)
+							fmt.Println("ERROR:", err)
 						}
 					}
 				}
