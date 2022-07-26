@@ -90,15 +90,14 @@ func main() {
 						continue
 					}
 					im, _, err := image.Decode(f)
+					_ = f.Close()
 					if err != nil {
 						fmt.Println("ERROR:", err)
-						_ = f.Close()
 						continue
 					}
 					dh, err := goimagehash.DifferenceHash(im)
 					if err != nil {
 						fmt.Println("ERROR:", err)
-						_ = f.Close()
 						continue
 					}
 					mu.Lock()
@@ -108,7 +107,6 @@ func main() {
 					})
 					fmt.Print("read: ", len(chklst), " / ", len(imgs), "\r")
 					mu.Unlock()
-					_ = f.Close()
 				}
 			}
 			wg.Done()
