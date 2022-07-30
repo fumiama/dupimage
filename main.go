@@ -190,15 +190,17 @@ func main() {
 						fmt.Println("sameset:", sameset)
 						panic("index " + strconv.Itoa(j) + ", file " + chklst[j].name + " has been marked as set " + strconv.FormatUint(uint64(x), 10) + " but cannot be found in sameset")
 					}
-				} else if isfirst { // 自立新组
-					sameset = append(sameset, []uint{uint(i)})
-					duplis[uint(i)] = uint(i)
-					isfirst = false
-					if isdebu {
-						fmt.Println("new set:", i)
+				} else {
+					if isfirst { // 自立新组
+						sameset = append(sameset, []uint{uint(i)})
+						duplis[uint(i)] = uint(i)
+						isfirst = false
+						if isdebu {
+							fmt.Println("new set:", i)
+						}
 					}
+					duplis[uint(j)] = uint(i)
 				}
-				duplis[uint(j)] = uint(i)
 				if isdebu {
 					fmt.Print("\n")
 				}
