@@ -163,7 +163,14 @@ func main() {
 								INNERLOP:
 									for l, set := range sameset {
 										for _, item := range set {
-											if item == uint(i) && l != k { // 找到旧组
+											if item == uint(i) { // 找到旧组
+												if l == k {
+													if isdebu {
+														fmt.Println("set", i, "and", x, "already in the same set")
+													}
+													hasfound = true
+													break INNERLOP
+												}
 												if isdebu {
 													fmt.Println("merge old set", set, "into", sameset[k])
 												}
