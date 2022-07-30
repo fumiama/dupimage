@@ -131,22 +131,25 @@ func main() {
 			}
 			if uint(dis) < throttle {
 				x, ok := duplis[chklst[j].name]
-				if ok {
+				if ok { // 该图片已被归入其他组
+					hasfound := false
 				LOP:
 					for k, set := range sameset {
 						for _, item := range set {
-							if x == item {
-								if isfirst {
+							if x == item { // 是该图片所属的组
+								if isfirst { // 首次归类, 直接添加新组
 									sameset[k] = append(sameset[k], uint(i))
 									duplis[chklst[i].name] = uint(i)
 									isfirst = false
+									hasfound = true
 								} else {
 								INNERLOP:
 									for l, set := range sameset {
 										for _, item := range set {
-											if item == uint(i) {
-												sameset[k] = append(sameset[k], set...)
-												sameset = append(sameset[:l], sameset[l+1:]...)
+											if item == uint(i) { // 找到旧组
+												sameset[k] = append(sameset[k], set...)         // 合并
+												sameset = append(sameset[:l], sameset[l+1:]...) // 删除
+												hasfound = true
 												break INNERLOP
 											}
 										}
@@ -156,7 +159,11 @@ func main() {
 							}
 						}
 					}
-				} else if isfirst {
+					if !hasfound {
+						fmt.Println("sameset: ", sameset)
+						panic("index " + strconv.Itoa(j) + ", file " + chklst[j].name + " has been marked as set " + strconv.FormatUint(uint64(x), 10) + " but cannot be found in sameset")
+					}
+				} else if isfirst { // 自立新组
 					sameset = append(sameset, []uint{uint(i)})
 					duplis[chklst[i].name] = uint(i)
 					isfirst = false
@@ -176,7 +183,8 @@ func main() {
 					}
 				}
 			}
-			panic("internal logic error")
+			fmt.Println("sameset: ", sameset)
+			panic("cannot find index " + strconv.FormatUint(uint64(i), 10) + " in sameset")
 		}
 		for k, v := range duplis {
 			i := setindex(v)
