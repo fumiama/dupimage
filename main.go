@@ -34,6 +34,7 @@ func main() {
 	a := flag.Bool("a", false, "action sort")
 	h := flag.Bool("h", false, "display help")
 	s := flag.Uint("s", 0, "folder sequence number start (exclude)")
+	d := flag.Bool("D", false, "enable debug-level log output")
 	flag.Parse()
 	if *h {
 		fmt.Println("Usage:", os.Args[0], "[-adht] ext1 ext2...")
@@ -45,6 +46,7 @@ func main() {
 	if throttle > 64 {
 		panic("invalid throttle")
 	}
+	isdebu := *d
 	exts := flag.Args()
 	for i, e := range exts {
 		exts[i] = strings.ToLower(e)
@@ -114,12 +116,18 @@ func main() {
 	}
 	wg.Wait()
 	fmt.Println("read file success, comparing...")
-	duplis := make(map[string]uint, len(chklst))
+	duplis := make(map[uint]uint, len(chklst))
 	sameset := make([][]uint, 0)
 	for i := 0; i < len(chklst); i++ {
 		fmt.Print("compare: ", i, " / ", len(chklst), "\r")
-		_, ok := duplis[chklst[i].name]
+		if isdebu {
+			fmt.Print('\n')
+		}
+		x, ok := duplis[uint(i)]
 		if ok {
+			if isdebu {
+				fmt.Println(chklst[i].name, "already has index", x, "skip")
+			}
 			continue
 		}
 		isfirst := true
@@ -130,23 +138,35 @@ func main() {
 				continue
 			}
 			if uint(dis) < throttle {
-				x, ok := duplis[chklst[j].name]
+				x, ok := duplis[uint(j)]
+				if isdebu {
+					fmt.Println("adding image index", j, "into same set", i)
+				}
 				if ok { // 该图片已被归入其他组
 					hasfound := false
+					if isdebu {
+						fmt.Println("this image has been added into set", x)
+					}
 				LOP:
 					for k, set := range sameset {
 						for _, item := range set {
 							if x == item { // 是该图片所属的组
 								if isfirst { // 首次归类, 直接添加新组
 									sameset[k] = append(sameset[k], uint(i))
-									duplis[chklst[i].name] = uint(i)
+									duplis[uint(i)] = uint(i)
 									isfirst = false
 									hasfound = true
+									if isdebu {
+										fmt.Println("is first, add directly")
+									}
 								} else {
 								INNERLOP:
 									for l, set := range sameset {
 										for _, item := range set {
 											if item == uint(i) { // 找到旧组
+												if isdebu {
+													fmt.Println("merge old set", set, "into", sameset[k])
+												}
 												sameset[k] = append(sameset[k], set...)         // 合并
 												sameset = append(sameset[:l], sameset[l+1:]...) // 删除
 												hasfound = true
@@ -160,15 +180,21 @@ func main() {
 						}
 					}
 					if !hasfound {
-						fmt.Println("sameset: ", sameset)
+						fmt.Println("sameset:", sameset)
 						panic("index " + strconv.Itoa(j) + ", file " + chklst[j].name + " has been marked as set " + strconv.FormatUint(uint64(x), 10) + " but cannot be found in sameset")
 					}
 				} else if isfirst { // 自立新组
 					sameset = append(sameset, []uint{uint(i)})
-					duplis[chklst[i].name] = uint(i)
+					duplis[uint(i)] = uint(i)
 					isfirst = false
+					if isdebu {
+						fmt.Println("new set:", i)
+					}
 				}
-				duplis[chklst[j].name] = uint(i)
+				duplis[uint(j)] = uint(i)
+				if isdebu {
+					fmt.Print('\n')
+				}
 			}
 		}
 	}
@@ -183,20 +209,20 @@ func main() {
 					}
 				}
 			}
-			fmt.Println("sameset: ", sameset)
+			fmt.Println("sameset:", sameset)
 			panic("cannot find index " + strconv.FormatUint(uint64(i), 10) + " in sameset")
 		}
 		for k, v := range duplis {
 			i := setindex(v)
-			dupset[i] = append(dupset[i], k)
+			dupset[i] = append(dupset[i], chklst[k].name)
 		}
 		j := *s
 		for _, lst := range dupset {
 			if len(lst) > 0 {
 				j++
-				fmt.Println("[", j, "] duplicate:", lst)
+				newdir := strconv.FormatUint(uint64(j), 10)
+				fmt.Println("["+newdir+"] duplicate:", lst)
 				if action {
-					newdir := strconv.FormatUint(uint64(j), 10)
 					err = os.MkdirAll(newdir, 0755)
 					if err != nil {
 						fmt.Println("ERROR:", err)
