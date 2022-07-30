@@ -121,7 +121,7 @@ func main() {
 	for i := 0; i < len(chklst); i++ {
 		fmt.Print("compare: ", i, " / ", len(chklst), "\r")
 		if isdebu {
-			fmt.Print('\n')
+			fmt.Print("\n")
 		}
 		x, ok := duplis[uint(i)]
 		if ok {
@@ -157,13 +157,13 @@ func main() {
 									isfirst = false
 									hasfound = true
 									if isdebu {
-										fmt.Println("is first, add directly")
+										fmt.Println("first time appears, add directly:", sameset[k])
 									}
 								} else {
 								INNERLOP:
 									for l, set := range sameset {
 										for _, item := range set {
-											if item == uint(i) { // 找到旧组
+											if item == uint(i) && l != k { // 找到旧组
 												if isdebu {
 													fmt.Println("merge old set", set, "into", sameset[k])
 												}
@@ -193,7 +193,7 @@ func main() {
 				}
 				duplis[uint(j)] = uint(i)
 				if isdebu {
-					fmt.Print('\n')
+					fmt.Print("\n")
 				}
 			}
 		}
